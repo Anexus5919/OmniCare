@@ -9,11 +9,13 @@ import StatCard from '@/components/common/StatCard';
 import Badge from '@/components/common/Badge';
 import VoiceAssistant from '@/components/voice/VoiceAssistant';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { getMedicationsByPatient, toggleMedicationTaken } from '@/services/storageService';
 import { formatTime, formatDate, getToday } from '@/utils/dateHelpers';
 
 export default function MedicationsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [medications, setMedications] = useState([]);
   const [, forceUpdate] = useState(0);
   const today = getToday();
@@ -48,20 +50,20 @@ export default function MedicationsPage() {
   }, 0);
 
   return (
-    <AppLayout title="Medications" requiredRole="patient">
+    <AppLayout title={t('medications')} requiredRole="patient">
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={FiClipboard}
-            label="Active Medications"
+            label={t('activeMedications')}
             value={medications.length}
             color="text-primary"
             bgColor="bg-primary-light"
           />
           <StatCard
             icon={FiPieChart}
-            label="Adherence Rate"
+            label={t('adherenceRate')}
             value={`${adherenceRate}%`}
             sublabel={`${takenDoses}/${totalDoses} doses`}
             color={adherenceRate > 80 ? 'text-secondary' : 'text-amber-600'}
@@ -69,15 +71,15 @@ export default function MedicationsPage() {
           />
           <StatCard
             icon={FiCheckCircle}
-            label="Today's Progress"
+            label={t('todaysProgress')}
             value={`${todayTaken}/${todayDoses}`}
-            sublabel="doses taken"
+            sublabel={t('dosesTaken')}
             color="text-emerald-600"
             bgColor="bg-emerald-50"
           />
           <StatCard
             icon={FiCalendar}
-            label="Next Dose"
+            label={t('nextDose')}
             value={medications[0]?.times[0] ? formatTime(medications[0].times[0]) : 'N/A'}
             color="text-purple-600"
             bgColor="bg-purple-50"
@@ -104,7 +106,7 @@ export default function MedicationsPage() {
                       <p className="text-sm text-text-light">{med.dosage}</p>
                     </div>
                     <Badge variant={medTaken === medTotal ? 'success' : 'warning'}>
-                      {medTaken}/{medTotal} today
+                      {medTaken}/{medTotal} {t('today')}
                     </Badge>
                   </div>
 
@@ -132,8 +134,8 @@ export default function MedicationsPage() {
                   </div>
 
                   <div className="flex justify-between text-xs text-text-light">
-                    <span>From: {formatDate(med.startDate)}</span>
-                    <span>To: {formatDate(med.endDate)}</span>
+                    <span>{t('from')}: {formatDate(med.startDate)}</span>
+                    <span>{t('to')}: {formatDate(med.endDate)}</span>
                   </div>
                 </Card>
               </motion.div>

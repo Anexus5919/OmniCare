@@ -3,13 +3,16 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Card from '@/components/common/Card';
 import { getDayOfWeek } from '@/utils/dateHelpers';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function SymptomChart({ logs, compact = false }) {
+  const { t } = useLanguage();
+
   if (!logs || logs.length === 0) {
     return (
       <Card>
-        <h3 className="font-semibold text-text mb-2">Symptom Trends</h3>
-        <p className="text-sm text-text-light">No symptom data yet</p>
+        <h3 className="font-semibold text-text mb-2">{t('symptomTrends')}</h3>
+        <p className="text-sm text-text-light">{t('noSymptomData')}</p>
       </Card>
     );
   }
@@ -24,7 +27,7 @@ export default function SymptomChart({ logs, compact = false }) {
 
   return (
     <Card>
-      <h3 className="font-semibold text-text mb-4">Symptom Trends (7 Days)</h3>
+      <h3 className="font-semibold text-text mb-4">{t('symptomTrends')}</h3>
       <div style={{ height: compact ? 200 : 280 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>

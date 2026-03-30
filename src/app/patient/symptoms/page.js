@@ -8,10 +8,12 @@ import Card from '@/components/common/Card';
 import SymptomChart from '@/components/patient/SymptomChart';
 import VoiceAssistant from '@/components/voice/VoiceAssistant';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useSymptomAnalysis } from '@/hooks/useSymptomAnalysis';
 import { useNotifications } from '@/context/NotificationContext';
 import { getSymptomLogsByPatient, addSymptomLog } from '@/services/storageService';
 import { formatDateTime } from '@/utils/dateHelpers';
+import PhotoCapture from '@/components/patient/PhotoCapture';
 
 const defaultLog = {
   painLevel: 3,
@@ -55,6 +57,7 @@ function Slider({ label, value, onChange, max = 10, icon }) {
 
 export default function SymptomPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { analyzeSymptoms } = useSymptomAnalysis();
   const { addToast } = useNotifications();
   const [logs, setLogs] = useState([]);
@@ -91,7 +94,7 @@ export default function SymptomPage() {
   }
 
   return (
-    <AppLayout title="Symptom Tracking" requiredRole="patient">
+    <AppLayout title={t('symptomTracking')} requiredRole="patient">
       <div className="space-y-6">
         {/* Log button */}
         <div className="flex justify-end">
@@ -102,7 +105,7 @@ export default function SymptomPage() {
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-blue-700 text-white rounded-xl font-medium shadow-sm"
           >
             <FiPlus className="w-4 h-4" />
-            New Check-in
+            {t('newCheckIn')}
           </motion.button>
         </div>
 
@@ -110,18 +113,18 @@ export default function SymptomPage() {
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
-              <h3 className="font-semibold text-text mb-4">Daily Symptom Check-in</h3>
+              <h3 className="font-semibold text-text mb-4">{t('dailySymptomCheckIn')}</h3>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Slider icon="🔴" label="Pain Level" value={form.painLevel} onChange={v => setForm(p => ({ ...p, painLevel: v }))} />
-                  <Slider icon="💧" label="Swelling" value={form.swelling} onChange={v => setForm(p => ({ ...p, swelling: v }))} />
-                  <Slider icon="🚶" label="Mobility" value={form.mobility} onChange={v => setForm(p => ({ ...p, mobility: v }))} />
-                  <Slider icon="😊" label="Mood" value={form.mood} onChange={v => setForm(p => ({ ...p, mood: v }))} />
-                  <Slider icon="😴" label="Fatigue" value={form.fatigue} onChange={v => setForm(p => ({ ...p, fatigue: v }))} />
-                  <Slider icon="🍽️" label="Appetite" value={form.appetite} onChange={v => setForm(p => ({ ...p, appetite: v }))} />
-                  <Slider icon="💨" label="Breathing Ease" value={form.breathing} onChange={v => setForm(p => ({ ...p, breathing: v }))} />
+                  <Slider icon="🔴" label={t('pain')} value={form.painLevel} onChange={v => setForm(p => ({ ...p, painLevel: v }))} />
+                  <Slider icon="💧" label={t('swelling')} value={form.swelling} onChange={v => setForm(p => ({ ...p, swelling: v }))} />
+                  <Slider icon="🚶" label={t('mobility')} value={form.mobility} onChange={v => setForm(p => ({ ...p, mobility: v }))} />
+                  <Slider icon="😊" label={t('mood')} value={form.mood} onChange={v => setForm(p => ({ ...p, mood: v }))} />
+                  <Slider icon="😴" label={t('fatigue')} value={form.fatigue} onChange={v => setForm(p => ({ ...p, fatigue: v }))} />
+                  <Slider icon="🍽️" label={t('appetite')} value={form.appetite} onChange={v => setForm(p => ({ ...p, appetite: v }))} />
+                  <Slider icon="💨" label={t('breathingEase')} value={form.breathing} onChange={v => setForm(p => ({ ...p, breathing: v }))} />
                   <div className="space-y-2">
-                    <label className="text-sm text-text-light">🌡️ Temperature (°F)</label>
+                    <label className="text-sm text-text-light">{`🌡️ ${t('temperature')} (°F)`}</label>
                     <input
                       type="number"
                       step="0.1"
@@ -134,13 +137,13 @@ export default function SymptomPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-text-light block mb-1">Notes (optional)</label>
+                  <label className="text-sm text-text-light block mb-1">{t('notesOptional')}</label>
                   <textarea
                     value={form.notes}
                     onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                     rows={2}
                     className="w-full px-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    placeholder="Any additional observations..."
+                    placeholder={t('additionalObservations')}
                   />
                 </div>
                 <div className="flex gap-3">
@@ -148,14 +151,14 @@ export default function SymptomPage() {
                     type="submit"
                     className="px-6 py-2.5 bg-gradient-to-r from-primary to-blue-700 text-white rounded-xl font-medium"
                   >
-                    Submit Check-in
+                    {t('submitCheckIn')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
                     className="px-6 py-2.5 bg-muted text-text-light rounded-xl font-medium"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                 </div>
               </form>
@@ -163,22 +166,25 @@ export default function SymptomPage() {
           </motion.div>
         )}
 
+        {/* Photo Documentation (Multimodal) */}
+        <PhotoCapture patientId={user?.patientId} />
+
         {/* Chart */}
         <SymptomChart logs={logs} />
 
         {/* History */}
         <Card>
-          <h3 className="font-semibold text-text mb-4">Symptom History</h3>
+          <h3 className="font-semibold text-text mb-4">{t('symptomHistory')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-text-light">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-center py-2 px-2">Pain</th>
-                  <th className="text-center py-2 px-2">Mobility</th>
-                  <th className="text-center py-2 px-2">Mood</th>
-                  <th className="text-center py-2 px-2">Temp</th>
-                  <th className="text-center py-2 px-2">Fatigue</th>
+                  <th className="text-left py-2 pr-4">{t('date')}</th>
+                  <th className="text-center py-2 px-2">{t('pain')}</th>
+                  <th className="text-center py-2 px-2">{t('mobility')}</th>
+                  <th className="text-center py-2 px-2">{t('mood')}</th>
+                  <th className="text-center py-2 px-2">{t('temp')}</th>
+                  <th className="text-center py-2 px-2">{t('fatigue')}</th>
                 </tr>
               </thead>
               <tbody>

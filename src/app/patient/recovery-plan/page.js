@@ -9,6 +9,7 @@ import Badge from '@/components/common/Badge';
 import ProgressRing from '@/components/common/ProgressRing';
 import VoiceAssistant from '@/components/voice/VoiceAssistant';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { getRecoveryPlanByPatient, getPatientById, toggleTask } from '@/services/storageService';
 
 const statusConfig = {
@@ -19,10 +20,10 @@ const statusConfig = {
 
 export default function RecoveryPlanPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [plan, setPlan] = useState(null);
   const [patient, setPatient] = useState(null);
   const [expandedPhase, setExpandedPhase] = useState(null);
-  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     if (user?.patientId) {
@@ -38,7 +39,7 @@ export default function RecoveryPlanPage() {
     }
   }, [plan]);
 
-  if (!plan) return <AppLayout title="Recovery Plan" requiredRole="patient"><div /></AppLayout>;
+  if (!plan) return <AppLayout title={t('recoveryPlan')} requiredRole="patient"><div /></AppLayout>;
 
   const allTasks = plan.phases.flatMap(p => p.tasks);
   const completedTasks = allTasks.filter(t => t.completed).length;
@@ -50,31 +51,31 @@ export default function RecoveryPlanPage() {
   }
 
   return (
-    <AppLayout title="Recovery Plan" requiredRole="patient">
+    <AppLayout title={t('recoveryPlan')} requiredRole="patient">
       <div className="space-y-6">
         {/* Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="flex flex-col items-center justify-center md:col-span-1">
             <ProgressRing score={overallProgress} size={140} />
-            <p className="text-sm text-text-light mt-2">{completedTasks}/{allTasks.length} tasks done</p>
+            <p className="text-sm text-text-light mt-2">{completedTasks}/{allTasks.length} {t('tasksDone')}</p>
           </Card>
           <Card className="md:col-span-2">
-            <h3 className="font-semibold text-text mb-3">Plan Details</h3>
+            <h3 className="font-semibold text-text mb-3">{t('planDetails')}</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-text-light">Surgery Type</p>
+                <p className="text-text-light">{t('surgeryType')}</p>
                 <p className="font-medium text-text">{plan.surgeryType}</p>
               </div>
               <div>
-                <p className="text-text-light">Duration</p>
-                <p className="font-medium text-text">{plan.totalWeeks} weeks</p>
+                <p className="text-text-light">{t('duration')}</p>
+                <p className="font-medium text-text">{plan.totalWeeks} {t('weeks')}</p>
               </div>
               <div>
-                <p className="text-text-light">Discharge Date</p>
+                <p className="text-text-light">{t('dischargeDate')}</p>
                 <p className="font-medium text-text">{patient?.dischargeDate}</p>
               </div>
               <div>
-                <p className="text-text-light">Total Phases</p>
+                <p className="text-text-light">{t('totalPhases')}</p>
                 <p className="font-medium text-text">{plan.phases.length}</p>
               </div>
             </div>
@@ -97,7 +98,6 @@ export default function RecoveryPlanPage() {
                 transition={{ delay: idx * 0.1 }}
               >
                 <Card padding="p-0" className="overflow-hidden">
-                  {/* Phase header */}
                   <button
                     onClick={() => setExpandedPhase(isExpanded ? null : phase.id)}
                     className="w-full flex items-center gap-4 p-5 hover:bg-muted/50 transition-colors"
@@ -113,12 +113,11 @@ export default function RecoveryPlanPage() {
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-text">{phase.name}</h3>
-                        <Badge variant={phase.status}>{phase.status}</Badge>
+                        <Badge variant={phase.status}>{phase.status === 'completed' ? t('completed') : phase.status === 'active' ? t('active') : t('upcoming')}</Badge>
                       </div>
                       <p className="text-sm text-text-light">{phase.description}</p>
-                      <p className="text-xs text-text-light mt-1">Week {phase.weekStart}-{phase.weekEnd} &middot; {phaseDone}/{phase.tasks.length} tasks</p>
+                      <p className="text-xs text-text-light mt-1">Week {phase.weekStart}-{phase.weekEnd} &middot; {phaseDone}/{phase.tasks.length} {t('tasks')}</p>
                     </div>
-                    {/* Progress bar */}
                     <div className="w-20 hidden sm:block">
                       <div className="w-full bg-muted rounded-full h-2">
                         <div
@@ -130,7 +129,6 @@ export default function RecoveryPlanPage() {
                     {isExpanded ? <FiChevronUp className="w-5 h-5 text-text-light" /> : <FiChevronDown className="w-5 h-5 text-text-light" />}
                   </button>
 
-                  {/* Tasks */}
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0 }}
