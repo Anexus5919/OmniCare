@@ -28,13 +28,51 @@ export function AuthProvider({ children }) {
     return u;
   }
 
+  /** Email + password + role login for the new auth form */
+  function loginWithCredentials(email, password, role) {
+    const users = getUsers();
+    const u = users.find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.role === role
+    );
+    if (u) {
+      setUser(u);
+      localStorage.setItem('recoverai_currentUser', JSON.stringify(u));
+      return { success: true, user: u };
+    }
+    return { success: false, error: 'Invalid credentials. Please use a valid demo email for the selected role.' };
+  }
+
+  /** Prototype-level signup — creates a local user in localStorage */
+  function signup({ name, email, role }) {
+    const users = getUsers();
+    const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (exists) {
+      return { success: false, error: 'An account with this email already exists.' };
+    }
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const newUser = {
+      id: `usr_${Date.now()}`,
+      name,
+      email,
+      role,
+      avatar: initials,
+      ...(role === 'patient' ? { patientId: `pat_${Date.now()}` } : {}),
+      ...(role !== 'patient' ? { assignedPatients: [] } : {}),
+    };
+    users.push(newUser);
+    localStorage.setItem('recoverai_users', JSON.stringify(users));
+    setUser(newUser);
+    localStorage.setItem('recoverai_currentUser', JSON.stringify(newUser));
+    return { success: true, user: newUser };
+  }
+
   function logout() {
     setUser(null);
     localStorage.removeItem('recoverai_currentUser');
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithCredentials, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
