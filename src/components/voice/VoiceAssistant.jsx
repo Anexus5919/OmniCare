@@ -71,6 +71,7 @@ export default function VoiceAssistant({ recoveryScore }) {
     <>
       {/* Floating Action Button */}
       <motion.button
+        data-tour="voice-btn"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}

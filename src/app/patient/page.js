@@ -22,6 +22,8 @@ import QuickCheckIn from '@/components/patient/QuickCheckIn';
 import MilestoneTracker from '@/components/patient/MilestoneTracker';
 import ActivityLog from '@/components/patient/ActivityLog';
 import MedicationReminder from '@/components/patient/MedicationReminder';
+import TutorialTour from '@/components/common/TutorialTour';
+import { patientTourSteps } from '@/data/tourSteps';
 
 export default function PatientDashboard() {
   const { user } = useAuth();
@@ -76,6 +78,7 @@ export default function PatientDashboard() {
 
         {/* Quick Check-in bar */}
         <motion.div
+          data-tour="quick-checkin"
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -94,7 +97,7 @@ export default function PatientDashboard() {
         </motion.div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div data-tour="stats-row" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={FiTrendingUp}
             label={t('dayOfRecovery')}
@@ -133,15 +136,15 @@ export default function PatientDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
-            <SymptomChart logs={symptomLogs} />
-            <DailyChecklist plan={plan} />
+            <div data-tour="symptom-chart"><SymptomChart logs={symptomLogs} /></div>
+            <div data-tour="daily-tasks"><DailyChecklist plan={plan} /></div>
             {/* Activity Log */}
             <ActivityLog patientId={user?.patientId} />
           </div>
 
           {/* Right column */}
           <div className="space-y-6">
-            <RecoveryScore score={score} />
+            <div data-tour="recovery-score"><RecoveryScore score={score} /></div>
             <MilestoneTracker patientId={user?.patientId} />
 
             {/* Doctor's Notes & Recommendations */}
@@ -149,7 +152,7 @@ export default function PatientDashboard() {
               const doctorNotes = getDoctorNotes(user?.patientId);
               if (doctorNotes.length === 0) return null;
               return (
-                <div className="bg-white rounded-2xl border border-border p-5">
+                <div data-tour="doctor-notes" className="bg-white rounded-2xl border border-border p-5">
                   <h3 className="font-semibold text-text mb-3 text-sm">Doctor&apos;s Recommendations</h3>
                   <div className="space-y-2.5">
                     {[...doctorNotes].reverse().slice(0, 4).map(note => (
@@ -186,6 +189,7 @@ export default function PatientDashboard() {
       </AnimatePresence>
 
       <VoiceAssistant recoveryScore={score?.score} />
+      <TutorialTour steps={patientTourSteps} storageKey="omnicare_tour_patient" />
     </AppLayout>
   );
 }

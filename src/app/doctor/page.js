@@ -10,6 +10,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import AppLayout from '@/components/layout/AppLayout';
+import TutorialTour from '@/components/common/TutorialTour';
+import { doctorTourSteps } from '@/data/tourSteps';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import StatCard from '@/components/common/StatCard';
@@ -93,7 +95,7 @@ export default function DoctorDashboard() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div data-tour="stats-row" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={FiUsers} label={t('allPatients')} value={patients.length} color="text-primary" bgColor="bg-primary-light" />
           <StatCard icon={FiAlertTriangle} label={t('unacknowledged')} value={unackAlerts.length} color="text-danger" bgColor="bg-red-50" />
           <StatCard icon={FiActivity} label={t('critical')} value={criticalCount} color="text-red-600" bgColor="bg-red-50" />
@@ -135,7 +137,7 @@ export default function DoctorDashboard() {
 
         {/* Patient table + alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2" padding="p-0">
+          <Card data-tour="patient-table" className="lg:col-span-2" padding="p-0">
             <div className="p-5 border-b border-border">
               <h3 className="font-semibold text-text">{t('patientOverview')}</h3>
             </div>
@@ -197,7 +199,7 @@ export default function DoctorDashboard() {
           </Card>
 
           {/* Alerts panel */}
-          <Card padding="p-0">
+          <Card data-tour="alerts-panel" padding="p-0">
             <div className="p-5 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold text-text">{t('alerts')}</h3>
               <Badge variant={unackAlerts.length > 0 ? 'warning' : 'success'}>{unackAlerts.length} {t('active_')}</Badge>
@@ -234,6 +236,7 @@ export default function DoctorDashboard() {
           <SummaryReport patientId={showReport} doctorName={user?.name} onClose={() => setShowReport(null)} />
         )}
       </AnimatePresence>
+      <TutorialTour steps={doctorTourSteps} storageKey="omnicare_tour_doctor" />
     </AppLayout>
   );
 }

@@ -76,7 +76,7 @@ export default function TopBar({ onMenuClick, title }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <LanguageToggle />
+          <span data-tour="language-toggle"><LanguageToggle /></span>
 
           {/* Notification bell */}
           <div className="relative">

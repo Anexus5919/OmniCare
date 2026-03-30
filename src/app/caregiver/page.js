@@ -8,6 +8,8 @@ import {
   FiClock, FiCheck, FiX
 } from 'react-icons/fi';
 import AppLayout from '@/components/layout/AppLayout';
+import TutorialTour from '@/components/common/TutorialTour';
+import { caregiverTourSteps } from '@/data/tourSteps';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import StatCard from '@/components/common/StatCard';
@@ -81,7 +83,7 @@ export default function CaregiverDashboard() {
     <AppLayout title={t('dashboard')} requiredRole="caregiver">
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div data-tour="stats-row" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={FiUsers} label={t('myPatients')} value={patients.length} color="text-primary" bgColor="bg-primary-light" />
           <StatCard icon={FiAlertTriangle} label={t('unacknowledged')} value={allAlerts.length} color="text-danger" bgColor="bg-red-50" />
           <StatCard icon={FiActivity} label={t('critical')} value={criticalAlerts.length} color="text-red-600" bgColor="bg-red-50" />
@@ -90,7 +92,7 @@ export default function CaregiverDashboard() {
 
         {/* Pending Task Approvals */}
         {pendingTasks.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <motion.div data-tour="pending-tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
             <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
               <FiClock className="w-4 h-4" /> {t('pending')} Task Approvals ({pendingTasks.length})
             </h3>
@@ -158,7 +160,7 @@ export default function CaregiverDashboard() {
         )}
 
         {/* Patient cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div data-tour="patient-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {patients.map(pat => {
             const data = getPatientData(pat.id);
             const latestLog = data.logs[data.logs.length - 1];
@@ -213,7 +215,7 @@ export default function CaregiverDashboard() {
           return (
             <>
               {/* Tabs */}
-              <div className="flex gap-1 bg-muted rounded-xl p-1">
+              <div data-tour="patient-tabs" className="flex gap-1 bg-muted rounded-xl p-1">
                 {[
                   { key: 'overview', label: t('overview'), icon: FiActivity },
                   { key: 'medications', label: t('medications'), icon: FiClipboard },
@@ -382,6 +384,7 @@ export default function CaregiverDashboard() {
           <SummaryReport patientId={showReport} doctorName={user?.name || 'Caregiver'} onClose={() => setShowReport(null)} />
         )}
       </AnimatePresence>
+      <TutorialTour steps={caregiverTourSteps} storageKey="omnicare_tour_caregiver" />
     </AppLayout>
   );
 }

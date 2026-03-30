@@ -66,7 +66,7 @@ export default function Sidebar({ isOpen, onClose }) {
           </Link>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <nav data-tour="sidebar-nav" className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {items.map((item) => {
             const isActive = pathname === item.href;
 
