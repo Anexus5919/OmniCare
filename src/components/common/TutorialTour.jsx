@@ -1,26 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+import { FiChevronLeft, FiChevronRight, FiX, FiGlobe } from 'react-icons/fi';
 import { useLanguage } from '@/context/LanguageContext';
 
 /**
  * TutorialTour — Clash-of-Clans-style guided walkthrough
  *
  * Props:
- *   steps: [{ target: '#css-selector' | null, title_en, title_hi, desc_en, desc_hi, position?: 'bottom'|'top'|'left'|'right' }]
- *   storageKey: string — localStorage key to track if tour was completed
+ *   steps: [{ target, title_en, title_hi, desc_en, desc_hi, icon, position }]
+ *   storageKey: string — localStorage key to track completion
  *   onComplete: () => void
  */
 export default function TutorialTour({ steps, storageKey, onComplete }) {
-  const { lang } = useLanguage();
+  const { lang, toggleLanguage } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(false);
   const [rect, setRect] = useState(null);
   const tooltipRef = useRef(null);
 
-  // Show tour only if not completed before
   useEffect(() => {
     const done = localStorage.getItem(storageKey);
     if (!done) {
@@ -29,7 +28,6 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
     }
   }, [storageKey]);
 
-  // Highlight the target element
   const highlightStep = useCallback((stepIdx) => {
     const step = steps[stepIdx];
     if (!step) return;
@@ -38,16 +36,14 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
       const el = document.querySelector(step.target);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        // Small delay for scroll to finish
         setTimeout(() => {
           const r = el.getBoundingClientRect();
           setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-        }, 300);
+        }, 350);
       } else {
         setRect(null);
       }
     } else {
-      // No target — center the tooltip (welcome/end screens)
       setRect(null);
     }
   }, [steps]);
@@ -56,7 +52,6 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
     if (visible) highlightStep(current);
   }, [current, visible, highlightStep]);
 
-  // Recalc on resize
   useEffect(() => {
     if (!visible) return;
     const handler = () => highlightStep(current);
@@ -65,11 +60,8 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
   }, [visible, current, highlightStep]);
 
   function handleNext() {
-    if (current < steps.length - 1) {
-      setCurrent(c => c + 1);
-    } else {
-      finish();
-    }
+    if (current < steps.length - 1) setCurrent(c => c + 1);
+    else finish();
   }
 
   function handleBack() {
@@ -90,23 +82,51 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
   const isFirst = current === 0;
   const isLast = current === steps.length - 1;
 
-  // Calculate tooltip position
-  const pad = 12;
+  // Smart tooltip positioning — always stays within viewport
+  const tooltipW = 340;
+  const tooltipH = 240; // approximate max height
+  const pad = 14;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+
   let tooltipStyle = {};
 
   if (rect) {
-    const pos = step.position || 'bottom';
-    if (pos === 'bottom') {
-      tooltipStyle = { top: rect.top + rect.height + pad, left: Math.max(16, Math.min(rect.left, window.innerWidth - 360)) };
-    } else if (pos === 'top') {
-      tooltipStyle = { top: Math.max(16, rect.top - pad - 200), left: Math.max(16, Math.min(rect.left, window.innerWidth - 360)) };
-    } else if (pos === 'right') {
-      tooltipStyle = { top: rect.top, left: rect.left + rect.width + pad };
-    } else if (pos === 'left') {
-      tooltipStyle = { top: rect.top, left: Math.max(16, rect.left - 360 - pad) };
+    // Clamp left so tooltip doesn't overflow horizontally
+    const clampLeft = (l) => Math.max(16, Math.min(l, vw - tooltipW - 16));
+
+    // Try preferred position, fall back if it goes off-screen
+    const spaceBelow = vh - (rect.top + rect.height + pad);
+    const spaceAbove = rect.top - pad;
+    const spaceRight = vw - (rect.left + rect.width + pad);
+    const spaceLeft = rect.left - pad;
+
+    const preferred = step.position || 'bottom';
+
+    if (preferred === 'bottom' && spaceBelow >= tooltipH) {
+      tooltipStyle = { top: rect.top + rect.height + pad, left: clampLeft(rect.left) };
+    } else if (preferred === 'top' && spaceAbove >= tooltipH) {
+      tooltipStyle = { top: rect.top - pad - tooltipH, left: clampLeft(rect.left) };
+    } else if (preferred === 'right' && spaceRight >= tooltipW + 20) {
+      tooltipStyle = { top: Math.max(16, Math.min(rect.top, vh - tooltipH - 16)), left: rect.left + rect.width + pad };
+    } else if (preferred === 'left' && spaceLeft >= tooltipW + 20) {
+      tooltipStyle = { top: Math.max(16, Math.min(rect.top, vh - tooltipH - 16)), left: rect.left - tooltipW - pad };
+    }
+    // Fallback: try each direction
+    else if (spaceBelow >= tooltipH) {
+      tooltipStyle = { top: rect.top + rect.height + pad, left: clampLeft(rect.left) };
+    } else if (spaceAbove >= tooltipH) {
+      tooltipStyle = { top: rect.top - pad - tooltipH, left: clampLeft(rect.left) };
+    } else if (spaceRight >= tooltipW + 20) {
+      tooltipStyle = { top: Math.max(16, Math.min(rect.top, vh - tooltipH - 16)), left: rect.left + rect.width + pad };
+    } else if (spaceLeft >= tooltipW + 20) {
+      tooltipStyle = { top: Math.max(16, Math.min(rect.top, vh - tooltipH - 16)), left: rect.left - tooltipW - pad };
+    }
+    // Ultimate fallback: overlay centered
+    else {
+      tooltipStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
     }
   } else {
-    // Centered (no target)
     tooltipStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
   }
 
@@ -137,9 +157,10 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
         />
       </svg>
 
-      {/* Highlight border around target */}
+      {/* Highlight border */}
       {rect && (
         <motion.div
+          key={`highlight-${current}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="absolute border-2 border-primary rounded-xl pointer-events-none"
@@ -153,15 +174,14 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
         />
       )}
 
-      {/* Tooltip card */}
+      {/* Tooltip */}
       <motion.div
         ref={tooltipRef}
         key={current}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        className="absolute w-[340px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-border overflow-hidden"
-        style={{ ...tooltipStyle, pointerEvents: 'auto' }}
+        className="absolute bg-white rounded-2xl shadow-2xl border border-border overflow-hidden"
+        style={{ ...tooltipStyle, width: tooltipW, maxWidth: '90vw', pointerEvents: 'auto' }}
       >
         {/* Progress bar */}
         <div className="h-1 bg-muted">
@@ -172,7 +192,7 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
         </div>
 
         <div className="p-5">
-          {/* Step icon/number */}
+          {/* Header row: icon, step counter, language toggle, close */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {step.icon && <span className="text-xl">{step.icon}</span>}
@@ -180,13 +200,24 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
                 {current + 1} / {steps.length}
               </span>
             </div>
-            <button
-              onClick={finish}
-              className="text-text-light hover:text-text transition-colors p-1"
-              title="Skip tour"
-            >
-              <FiX className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Language toggle inside tour */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted hover:bg-slate-200 transition-colors text-[10px] font-semibold text-text"
+                title={lang === 'en' ? 'हिंदी में देखें' : 'View in English'}
+              >
+                <FiGlobe className="w-3 h-3" />
+                {lang === 'en' ? 'हिंदी' : 'EN'}
+              </button>
+              <button
+                onClick={finish}
+                className="text-text-light hover:text-text transition-colors p-1"
+                title="Skip tour"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Content */}
@@ -199,7 +230,7 @@ export default function TutorialTour({ steps, storageKey, onComplete }) {
               onClick={finish}
               className="text-xs text-text-light hover:text-text font-medium transition-colors"
             >
-              {lang === 'hi' ? 'छोड़ें' : 'Skip Tour'}
+              {lang === 'hi' ? 'टूर छोड़ें' : 'Skip Tour'}
             </button>
 
             <div className="flex items-center gap-2">
