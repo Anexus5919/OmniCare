@@ -17,7 +17,8 @@ import FollowUpTracker from '@/components/patient/FollowUpTracker';
 import SummaryReport from '@/components/doctor/SummaryReport';
 import {
   getSymptomLogsByPatient, getMedicationsByPatient, getRecoveryPlanByPatient,
-  getAlertsByPatient, getDoctorNotes, addDoctorNote, addMedication
+  getAlertsByPatient, getDoctorNotes, addDoctorNote, addMedication,
+  getPatientPhotos, deleteMedication
 } from '@/services/storageService';
 import { computeRecoveryScore } from '@/utils/recoveryScoring';
 import { daysSince, formatDate, getRelativeTime } from '@/utils/dateHelpers';
@@ -39,6 +40,8 @@ export default function PatientDetailView({ patient, user, onBack }) {
   const [showMedForm, setShowMedForm] = useState(false);
   const [medForm, setMedForm] = useState({ name: '', dosage: '', frequency: 'once_daily', times: ['08:00'], instructions: '' });
   const [patientMeds, setPatientMeds] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // { action: 'delete'|'edit'|'add', data: {...} }
+  const [editingMedId, setEditingMedId] = useState(null);
 
   const logs = getSymptomLogsByPatient(patient.id);
   const meds = getMedicationsByPatient(patient.id);
@@ -49,6 +52,7 @@ export default function PatientDetailView({ patient, user, onBack }) {
   const latestLog = logs[logs.length - 1];
   const activePhase = plan?.phases?.find(p => p.status === 'active');
   const isDoctor = user?.role === 'doctor';
+  const patientPhotos = getPatientPhotos(patient.id);
 
   // Medication adherence
   const today = new Date().toISOString().split('T')[0];
@@ -71,17 +75,26 @@ export default function PatientDetailView({ patient, user, onBack }) {
 
   function handleAddMed() {
     if (!medForm.name.trim() || !medForm.dosage.trim()) return;
-    const newMeds = addMedication({
-      patientId: patient.id,
-      name: medForm.name,
-      dosage: medForm.dosage,
-      frequency: medForm.frequency,
-      times: medForm.times,
-      instructions: medForm.instructions,
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: '',
-    });
-    setPatientMeds(newMeds);
+    if (editingMedId) {
+      // Edit existing
+      const { updateMedication, getMedicationsByPatient: getMeds } = require('@/services/storageService');
+      updateMedication({ id: editingMedId, patientId: patient.id, name: medForm.name, dosage: medForm.dosage, frequency: medForm.frequency, times: medForm.times, instructions: medForm.instructions, takenLog: {} });
+      setPatientMeds(getMeds(patient.id));
+      setEditingMedId(null);
+    } else {
+      // Add new
+      const newMeds = addMedication({
+        patientId: patient.id,
+        name: medForm.name,
+        dosage: medForm.dosage,
+        frequency: medForm.frequency,
+        times: medForm.times,
+        instructions: medForm.instructions,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+      });
+      setPatientMeds(newMeds);
+    }
     setMedForm({ name: '', dosage: '', frequency: 'once_daily', times: ['08:00'], instructions: '' });
     setShowMedForm(false);
   }
@@ -162,6 +175,31 @@ export default function PatientDetailView({ patient, user, onBack }) {
               <div className="lg:col-span-2 space-y-6">
                 <SymptomChart logs={logs} />
                 <ActivityLog patientId={patient.id} />
+                {/* Patient Photos */}
+                {patientPhotos.length > 0 && (
+                  <Card>
+                    <h3 className="font-semibold text-text mb-3">{t('photoCapture')}</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {patientPhotos.map((photo, idx) => (
+                        <div key={`photo_${idx}`} className="relative">
+                          <img src={photo.url} alt="Patient photo" className="w-full h-20 rounded-lg object-cover border border-border" />
+                          <div className="absolute bottom-1 left-1 right-1">
+                            {photo.analysis && (
+                              <span className={`text-[8px] px-1 py-0.5 rounded font-medium ${
+                                photo.analysis.status === 'concern' ? 'bg-red-500 text-white' :
+                                photo.analysis.status === 'monitor' ? 'bg-amber-500 text-white' :
+                                'bg-emerald-500 text-white'
+                              }`}>{photo.analysis.label}</span>
+                            )}
+                          </div>
+                          <span className="absolute top-1 right-1 text-[7px] bg-black/60 text-white px-1 rounded">
+                            {new Date(photo.timestamp).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
               </div>
               <div className="space-y-4">
                 <Card>
@@ -263,8 +301,8 @@ export default function PatientDetailView({ patient, user, onBack }) {
                       placeholder="Special instructions (optional)" rows={2}
                       className="w-full px-3 py-2 rounded-lg border border-border text-sm resize-none mb-3 focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     <div className="flex gap-2 justify-end">
-                      <button onClick={() => setShowMedForm(false)} className="px-4 py-2 text-xs font-medium text-text-light bg-muted rounded-lg">{t('cancel')}</button>
-                      <button onClick={handleAddMed} className="px-4 py-2 text-xs font-semibold text-white bg-primary rounded-lg hover:shadow-lg">{t('submit')}</button>
+                      <button onClick={() => { setShowMedForm(false); setEditingMedId(null); }} className="px-4 py-2 text-xs font-medium text-text-light bg-muted rounded-lg">{t('cancel')}</button>
+                      <button onClick={() => setConfirmModal({ action: editingMedId ? 'edit' : 'add', data: { name: medForm.name, ...(editingMedId ? { id: editingMedId } : {}) } })} className="px-4 py-2 text-xs font-semibold text-white bg-primary rounded-lg hover:shadow-lg">{t('submit')}</button>
                     </div>
                   </motion.div>
                 )}
@@ -307,6 +345,26 @@ export default function PatientDetailView({ patient, user, onBack }) {
                           );
                         })}
                       </div>
+                      {isDoctor && (
+                        <div className="flex gap-1.5 mt-2 pt-2 border-t border-border/50">
+                          <button
+                            onClick={() => {
+                              setMedForm({ name: med.name, dosage: med.dosage, frequency: med.frequency, times: med.times, instructions: med.instructions || '' });
+                              setEditingMedId(med.id);
+                              setShowMedForm(true);
+                            }}
+                            className="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setConfirmModal({ action: 'delete', data: med })}
+                            className="text-xs px-2.5 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -412,6 +470,62 @@ export default function PatientDetailView({ patient, user, onBack }) {
         {activeTab === 'milestones' && (
           <motion.div key="milestones" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <MilestoneTracker patientId={patient.id} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setConfirmModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
+            >
+              <h3 className="text-lg font-bold text-text mb-2">
+                {confirmModal.action === 'delete' ? 'Delete Medication' : confirmModal.action === 'edit' ? 'Update Medication' : 'Add Medication'}
+              </h3>
+              <p className="text-sm text-text-light mb-5">
+                {confirmModal.action === 'delete'
+                  ? `Are you sure you want to delete "${confirmModal.data?.name}"? This cannot be undone.`
+                  : `Confirm ${confirmModal.action === 'edit' ? 'updating' : 'adding'} "${confirmModal.data?.name}"?`}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="flex-1 py-2.5 bg-muted text-text rounded-xl text-sm font-medium hover:bg-slate-200"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmModal.action === 'delete') {
+                      const allMeds = deleteMedication(confirmModal.data.id);
+                      setPatientMeds(allMeds.filter(m => m.patientId === patient.id));
+                    } else if (confirmModal.action === 'add') {
+                      handleAddMed();
+                    } else if (confirmModal.action === 'edit') {
+                      handleAddMed();
+                    }
+                    setConfirmModal(null);
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white ${
+                    confirmModal.action === 'delete' ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:shadow-lg'
+                  }`}
+                >
+                  {confirmModal.action === 'delete' ? 'Delete' : 'Confirm'}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
