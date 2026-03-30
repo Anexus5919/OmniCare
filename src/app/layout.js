@@ -6,6 +6,10 @@ import { LanguageProvider } from '@/context/LanguageContext';
 export const metadata = {
   title: 'OmniCare - Smart Post-Discharge Recovery Companion',
   description: 'AI-powered post-discharge care platform for patients, caregivers, and doctors',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }) {
