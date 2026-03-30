@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiBell, FiX, FiMessageSquare } from 'react-icons/fi';
+import { FiMenu, FiBell, FiX, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { getUnacknowledgedAlerts, acknowledgeAlert, getDoctorNotes } from '@/services/storageService';
 import { getRelativeTime } from '@/utils/dateHelpers';
@@ -13,7 +14,9 @@ import { useLanguage } from '@/context/LanguageContext';
 export default function TopBar({ onMenuClick, title }) {
   const { user } = useAuth();
   const { lang, t } = useLanguage();
+  const router = useRouter();
   const [showAlerts, setShowAlerts] = useState(false);
+  const [dismissed, setDismissed] = useState([]);
   const alerts = getUnacknowledgedAlerts();
 
   const userAlerts = user?.role === 'patient'
@@ -55,7 +58,7 @@ export default function TopBar({ onMenuClick, title }) {
     })),
   ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-  const totalCount = notifications.length;
+  const visibleNotifications = notifications.filter(n => !dismissed.includes(`${n.type}_${n.id}`));
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-border px-4 lg:px-8 py-4">
@@ -82,9 +85,9 @@ export default function TopBar({ onMenuClick, title }) {
               className="relative p-2.5 rounded-xl hover:bg-muted transition-colors"
             >
               <FiBell className="w-5 h-5 text-text-light" />
-              {totalCount > 0 && (
+              {visibleNotifications.length > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-danger text-white text-[10px] rounded-full flex items-center justify-center font-bold">
-                  {totalCount}
+                  {visibleNotifications.length}
                 </span>
               )}
             </button>
@@ -104,35 +107,67 @@ export default function TopBar({ onMenuClick, title }) {
                     </button>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {visibleNotifications.length === 0 ? (
                       <p className="p-4 text-sm text-text-light text-center">{t('noNewNotifications')}</p>
                     ) : (
-                      notifications.slice(0, 8).map((item, idx) => (
+                      visibleNotifications.slice(0, 8).map((item, idx) => (
                         <div
                           key={`${item.type}_${item.id}_${idx}`}
-                          className="p-4 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
-                          onClick={() => {
-                            if (item.type === 'alert' && item.alertId) {
-                              acknowledgeAlert(item.alertId, user?.id);
-                            }
-                            setShowAlerts(false);
-                          }}
+                          className="p-4 border-b border-border last:border-0 hover:bg-muted/50"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-2 flex-1">
-                              {item.type === 'note' && (
-                                <FiMessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                              )}
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-text">{item.title}</p>
-                                <p className="text-xs text-text-light mt-1">{item.message}</p>
+                          <div className="flex items-start gap-2">
+                            <div
+                              className="flex-1 cursor-pointer"
+                              onClick={() => {
+                                setShowAlerts(false);
+                                // Navigate based on type
+                                if (item.type === 'alert') {
+                                  if (user?.role === 'patient') {
+                                    if (item.title?.includes('Medication')) router.push('/patient/medications');
+                                    else if (item.title?.includes('Appointment') || item.title?.includes('Follow')) router.push('/patient/follow-ups');
+                                    else router.push('/patient/symptoms');
+                                  } else if (user?.role === 'caregiver') {
+                                    router.push('/caregiver/patients');
+                                  } else {
+                                    router.push('/doctor/patients');
+                                  }
+                                } else if (item.type === 'note') {
+                                  if (user?.role === 'patient') router.push('/patient');
+                                  else if (user?.role === 'caregiver') router.push('/caregiver/notes');
+                                  else router.push('/doctor/notes');
+                                }
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2 flex-1">
+                                  {item.type === 'note' && (
+                                    <FiMessageSquare className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                                  )}
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-text">{item.title}</p>
+                                    <p className="text-xs text-text-light mt-1">{item.message}</p>
+                                  </div>
+                                </div>
+                                <Badge variant={item.type === 'note' ? 'info' : item.severity}>
+                                  {item.type === 'note' ? 'note' : item.severity}
+                                </Badge>
                               </div>
+                              <p className="text-xs text-text-light mt-2">{getRelativeTime(item.timestamp)}</p>
                             </div>
-                            <Badge variant={item.type === 'note' ? 'info' : item.severity}>
-                              {item.type === 'note' ? 'note' : item.severity}
-                            </Badge>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDismissed(prev => [...prev, `${item.type}_${item.id}`]);
+                                if (item.type === 'alert' && item.alertId) {
+                                  acknowledgeAlert(item.alertId, user?.id);
+                                }
+                              }}
+                              className="shrink-0 p-1.5 rounded-lg hover:bg-red-50 text-text-light hover:text-red-500 transition-colors mt-0.5"
+                              title="Dismiss"
+                            >
+                              <FiTrash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          <p className="text-xs text-text-light mt-2">{getRelativeTime(item.timestamp)}</p>
                         </div>
                       ))
                     )}
