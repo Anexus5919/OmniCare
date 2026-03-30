@@ -48,15 +48,30 @@ export function useVoiceAssistant() {
     if (typeof window === 'undefined') return;
     const synth = window.speechSynthesis;
     synth.cancel();
+
+    // Detect if text is Hindi (contains Devanagari characters)
+    const isHindiText = /[\u0900-\u097F]/.test(text);
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.85;
+    utterance.rate = isHindiText ? 0.9 : 0.85;
     utterance.pitch = 1.0;
     utterance.volume = 1;
-    // Try to pick a softer voice
+
+    // Set language explicitly
+    utterance.lang = isHindiText ? 'hi-IN' : 'en-US';
+
+    // Pick appropriate voice
     const voices = synth.getVoices();
-    const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
-      || voices.find(v => v.lang.startsWith('en'));
-    if (preferred) utterance.voice = preferred;
+    if (isHindiText) {
+      const hindiVoice = voices.find(v => v.lang === 'hi-IN')
+        || voices.find(v => v.lang.startsWith('hi'));
+      if (hindiVoice) utterance.voice = hindiVoice;
+    } else {
+      const enVoice = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+    }
+
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     synth.speak(utterance);
