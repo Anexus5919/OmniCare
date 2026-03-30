@@ -212,6 +212,25 @@ export function addDoctorNote(note) {
   return all.filter(n => n.patientId === note.patientId);
 }
 
+// Patient Photos
+export function getPatientPhotos(patientId) {
+  return (get('patientPhotos') || []).filter(p => p.patientId === patientId);
+}
+export function addPatientPhoto(photo) {
+  const all = get('patientPhotos') || [];
+  all.push({ ...photo, id: `photo_${Date.now()}` });
+  set('patientPhotos', all);
+  return all.filter(p => p.patientId === photo.patientId);
+}
+
+// Delete medication (doctor)
+export function deleteMedication(medId) {
+  const meds = getMedications();
+  const filtered = meds.filter(m => m.id !== medId);
+  set('medications', filtered);
+  return filtered;
+}
+
 // Medication taken toggle
 export function toggleMedicationTaken(medId, date, timeIndex) {
   const meds = getMedications();

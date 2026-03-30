@@ -72,6 +72,17 @@ export default function PhotoCapture({ patientId }) {
     };
 
     setPhotos(prev => [...prev, newPhoto]);
+
+    // Persist to localStorage for doctor visibility
+    const { addPatientPhoto } = await import('@/services/storageService');
+    addPatientPhoto({
+      patientId,
+      url: url,
+      name: file.name,
+      timestamp: new Date().toISOString(),
+      analysis: null, // will be updated after analysis
+    });
+
     setAnalyzing(true);
     setAnalysis(null);
 
@@ -80,6 +91,14 @@ export default function PhotoCapture({ patientId }) {
     const result = await analyzeImage(file);
     setAnalysis(result);
     setAnalyzing(false);
+
+    // Update stored photo with analysis result
+    const storedPhotos = JSON.parse(localStorage.getItem('recoverai_patientPhotos') || '[]');
+    const lastPhoto = storedPhotos[storedPhotos.length - 1];
+    if (lastPhoto && lastPhoto.patientId === patientId) {
+      lastPhoto.analysis = { status: result.status, label: result.label };
+      localStorage.setItem('recoverai_patientPhotos', JSON.stringify(storedPhotos));
+    }
 
     // Auto-alert doctor if concerning
     if (result.status === 'concern') {
