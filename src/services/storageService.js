@@ -4,6 +4,7 @@ import { mockRecoveryPlans } from '@/data/mockRecoveryPlans';
 import { mockMedications } from '@/data/mockMedications';
 import { mockSymptomLogs } from '@/data/mockSymptomLogs';
 import { mockAlerts } from '@/data/mockAlerts';
+import { mockDoctorNotes } from '@/data/mockDoctorNotes';
 
 const PREFIX = 'recoverai_';
 
@@ -22,15 +23,20 @@ function set(key, value) {
   localStorage.setItem(getKey(key), JSON.stringify(value));
 }
 
+const SEED_VERSION = 2; // Bump this when mock data changes
+
 export function seedData() {
-  if (get('seeded')) return;
+  const currentVersion = get('seedVersion');
+  if (currentVersion === SEED_VERSION) return;
   set('users', mockUsers);
   set('patients', mockPatients);
   set('recoveryPlans', mockRecoveryPlans);
   set('medications', mockMedications);
   set('symptomLogs', mockSymptomLogs);
   set('alerts', mockAlerts);
+  set('doctorNotes', mockDoctorNotes);
   set('seeded', true);
+  set('seedVersion', SEED_VERSION);
 }
 
 export function resetData() {
@@ -110,7 +116,7 @@ export function acknowledgeAlert(alertId, userId) {
   set('alerts', alerts);
 }
 
-// Task toggle
+// Task toggle — now marks as "pending_approval" instead of completed directly
 export function toggleTask(planId, phaseId, taskId) {
   const plans = getRecoveryPlans();
   const plan = plans.find(p => p.id === planId);
@@ -119,9 +125,91 @@ export function toggleTask(planId, phaseId, taskId) {
   if (!phase) return;
   const task = phase.tasks.find(t => t.id === taskId);
   if (!task) return;
-  task.completed = !task.completed;
+  // If already completed, uncomplete. If not, mark pending_approval
+  if (task.completed) {
+    task.completed = false;
+    task.pendingApproval = false;
+  } else {
+    task.pendingApproval = true;
+    task.completed = false;
+  }
   set('recoveryPlans', plans);
-  return task.completed;
+  return task;
+}
+
+// Caregiver approves task
+export function approveTask(planId, phaseId, taskId, approverId) {
+  const plans = getRecoveryPlans();
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  const phase = plan.phases.find(ph => ph.id === phaseId);
+  if (!phase) return;
+  const task = phase.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.completed = true;
+  task.pendingApproval = false;
+  task.approvedBy = approverId;
+  task.approvedAt = new Date().toISOString();
+  set('recoveryPlans', plans);
+  return task;
+}
+
+// Caregiver rejects task
+export function rejectTask(planId, phaseId, taskId) {
+  const plans = getRecoveryPlans();
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  const phase = plan.phases.find(ph => ph.id === phaseId);
+  if (!phase) return;
+  const task = phase.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.completed = false;
+  task.pendingApproval = false;
+  set('recoveryPlans', plans);
+  return task;
+}
+
+// Get pending tasks for caregiver validation
+export function getPendingTasks(patientIds) {
+  const plans = getRecoveryPlans();
+  const pending = [];
+  plans.forEach(plan => {
+    if (!patientIds.includes(plan.patientId)) return;
+    plan.phases.forEach(phase => {
+      phase.tasks.forEach(task => {
+        if (task.pendingApproval) {
+          const patient = getPatientById(plan.patientId);
+          pending.push({ planId: plan.id, phaseId: phase.id, phaseName: phase.name, task, patientName: patient?.name, patientId: plan.patientId, patientAvatar: patient?.avatar });
+        }
+      });
+    });
+  });
+  return pending;
+}
+
+// Add medication (doctor)
+export function addMedication(med) {
+  const meds = getMedications();
+  meds.push({ ...med, id: `med_${Date.now()}`, takenLog: {} });
+  set('medications', meds);
+  return meds.filter(m => m.patientId === med.patientId);
+}
+
+// Get all doctor notes
+export function getAllDoctorNotes() {
+  return get('doctorNotes') || [];
+}
+
+// Doctor Notes & Recommendations
+export function getDoctorNotes(patientId) {
+  const all = get('doctorNotes') || [];
+  return all.filter(n => n.patientId === patientId);
+}
+export function addDoctorNote(note) {
+  const all = get('doctorNotes') || [];
+  all.push({ ...note, id: `note_${Date.now()}`, timestamp: new Date().toISOString() });
+  set('doctorNotes', all);
+  return all.filter(n => n.patientId === note.patientId);
 }
 
 // Medication taken toggle
