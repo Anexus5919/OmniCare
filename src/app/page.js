@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg">
-      <div className="animate-pulse text-primary text-xl font-semibold">Loading RecoverAI...</div>
+      <div className="animate-pulse text-primary text-xl font-semibold">Loading OmniCare...</div>
     </div>
   );
 }

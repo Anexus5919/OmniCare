@@ -1,24 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1e6bb8;
-  --color-primary-light: #e8f2fc;
-  --color-primary-dark: #14507a;
+  /* Primary — derived from the steel-blue scrubs in the hero image */
+  --color-primary: #3b82a0;
+  --color-primary-light: #e7f1f6;
+  --color-primary-dark: #1e5068;
+  --color-primary-50: #f0f7fb;
+
+  /* Secondary — cool teal drawn from the stethoscope / clinical accent */
   --color-secondary: #2a9d8f;
   --color-secondary-light: #e6f7f5;
+
+  /* Accent — warm coral for CTAs, standing out from the cool palette */
   --color-accent: #e76f51;
+  --color-accent-light: #fef0ec;
+
+  /* Semantic */
   --color-warning: #f4a261;
   --color-danger: #e63946;
   --color-success: #2a9d8f;
   --color-info: #457b9d;
-  --color-bg: #f0f6fc;
+
+  /* Surfaces — inspired by the soft blurred hospital whites/grays */
+  --color-bg: #f0f4f8;
   --color-card: #ffffff;
-  --color-sidebar: #0f2b46;
-  --color-sidebar-hover: #163d5e;
-  --color-text: #1a2332;
-  --color-text-light: #64748b;
-  --color-border: #e2e8f0;
-  --color-muted: #f1f5f9;
+  --color-sidebar: #0c2a3e;
+  --color-sidebar-hover: #143d57;
+
+  /* Text */
+  --color-text: #1a2736;
+  --color-text-light: #607080;
+
+  /* Borders & muted */
+  --color-border: #d8e2ea;
+  --color-muted: #edf2f7;
+
+  /* Glass panel tokens */
+  --color-glass: rgba(255, 255, 255, 0.12);
+  --color-glass-border: rgba(255, 255, 255, 0.2);
+  --color-glass-strong: rgba(255, 255, 255, 0.85);
+
+  /* Landing page specific */
+  --color-hero-overlay: rgba(12, 42, 62, 0.55);
 }
 
 body {
@@ -57,4 +80,79 @@ body {
 }
 .animate-score-fill {
   animation: score-fill 1.5s ease-out forwards;
+}
+
+/* ── Animated rotating beam border (Magic UI inspired) ── */
+@keyframes beam-rotate {
+  0% { --beam-angle: 0deg; }
+  100% { --beam-angle: 360deg; }
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.beam-border {
+  position: relative;
+  border-radius: 1.25rem;
+  isolation: isolate;
+}
+
+.beam-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0%,
+    transparent 30%,
+    rgba(59, 130, 160, 0.7) 45%,
+    rgba(42, 157, 143, 0.9) 50%,
+    rgba(59, 130, 160, 0.7) 55%,
+    transparent 70%,
+    transparent 100%
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  animation: beam-rotate 4s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Subtle glow behind the panel */
+.auth-glow {
+  box-shadow:
+    0 0 60px rgba(59, 130, 160, 0.15),
+    0 0 120px rgba(42, 157, 143, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Glass panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* Floating particles animation */
+@keyframes float-up {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0; }
+  100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: float-up var(--dur, 12s) var(--delay, 0s) linear infinite;
 }
